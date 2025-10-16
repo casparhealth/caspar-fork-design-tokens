@@ -210,6 +210,10 @@ export const UrlExportSettings = () => {
               value: config.key.authType.token
             },
             {
+              label: '(Github) Direct Commit',
+              value: config.key.authType.githubCommit
+            },
+            {
               label: '(Gitlab) token',
               value: config.key.authType.gitlabToken
             },
