@@ -1,10 +1,64 @@
+> [!NOTE]
+> **Caspar Health Fork**
+> This is a fork of the [official Design Tokens plugin](https://github.com/lukasoppermann/design-tokens) with added GitHub Direct Commit functionality. See [MODIFICATIONS.md](MODIFICATIONS.md) for details on our changes.
+
+## Quick Start for Caspar Health Team
+
+### Installing the Plugin in Figma Organization
+
+1. **Clone the repository**
+   ```bash
+   cd ~/Documents/work-caspar
+   git clone https://github.com/casparhealth/caspar-fork-design-tokens.git
+   cd caspar-fork-design-tokens
+   ```
+
+2. **Make changes and rebuild**
+   ```bash
+   # After editing source files, rebuild the plugin
+   docker run --rm -v $(pwd):/app -w /app node:18-alpine sh -c "npm install && npm run build"
+   ```
+
+3. **Import into Figma Desktop**
+   - Open **Figma Desktop** app (required for plugin development)
+   - Navigate to: `Plugins > Development > Import plugin from manifest...`
+   - Browse to: `~/Documents/work-caspar/caspar-fork-design-tokens`
+   - Select: `manifest.json`
+   - Click: **Import**
+   - The plugin will appear as **"Caspar Fork Design Tokens"** in your plugins menu
+
+4. **Publish new version to Figma Organization**
+   - In Figma, find the plugin in `Plugins & widgets` search
+   - Right-click on **"Caspar Fork Design Tokens"**
+   - Select: **Publish new version**
+   - Add version notes describing your changes
+   - Click: **Publish**
+   - The updated plugin will be available to all team members in the Caspar Health organization
+
+5. **Push changes to repository**
+   ```bash
+   git add -A
+   git commit -m "feat: describe your changes"
+   git push origin main
+   ```
+
+### Configuration for GitHub Direct Commit
+
+See [GITHUB-INTEGRATION.md](GITHUB-INTEGRATION.md) for detailed setup instructions including:
+- Creating GitHub Personal Access Token
+- Configuring plugin settings
+- Branch naming strategy
+- Testing and troubleshooting
+
+---
+
 > [!WARNING]
-> **This plugin is only partially supported!**  
+> **This plugin is only partially supported!**
 > This means: I don't have capacity to add any features or really improve stuff. Bugfixes may be added if time allows.
 > I am also happy to discuss and merge PRs.
-> 
-> I personally have changed my opinion a long time ago to favor the source fo truth for design tokens to be in a json file. Figma should be a consumer so you only import tokens into figma. This is why I don't use plugins like this one anymore in my work. 
-> 
+>
+> I personally have changed my opinion a long time ago to favor the source fo truth for design tokens to be in a json file. Figma should be a consumer so you only import tokens into figma. This is why I don't use plugins like this one anymore in my work.
+>
 > → [Read more about the a better setup](https://medium.com/user-experience-design-1/the-ultimate-design-token-setup-cdf50dc841c8#:~:text=you%20are%20making.-,Source%20of%20truth,-There%20is%20some)
 
 
@@ -37,7 +91,7 @@ The **Design Tokens** plugin for Figma allows you to export design tokens into a
     - [Opacity token](#opacity)
   - [Available properties](#available-properties)
 - [Settings](#settings)
-  - [File Export Settings](#file-export-settings)  
+  - [File Export Settings](#file-export-settings)
   - [Push tokens to Github / Server](#push-to-server)
 - [Contribution](#contribution)
 
@@ -353,7 +407,7 @@ You can define any additional prefix via this option, e.g `*`. This can be helpf
 
 ### Reference mode in variables
 
-You can configure whether to include these mode names in the output JSON or not.  
+You can configure whether to include these mode names in the output JSON or not.
 By default, the mode names are not included in both the token names and the token values. You can turn on this behavior in the plug-in settings:
 
 - If you wish to include the mode name in the token names, but not in the token values, you can activate the "Add mode to token value".
@@ -449,7 +503,7 @@ The body of the request will look like the following:
 
 ```ts
   "event_type": "update-tokens", // or any string you defined
-  "client_payload": { 
+  "client_payload": {
     "tokens": "{...}", // the stringified json object holding all your design tokens
     "filename": "Design Tokens", // the Figma file name from which the tokens were exported
     "commitMessage": "Your commit message"
