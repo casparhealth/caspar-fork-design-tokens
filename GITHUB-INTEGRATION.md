@@ -2,7 +2,7 @@
 
 ## Overview
 
-This update adds **GitHub direct commit** functionality to the Figma Design Tokens plugin, bypassing the GitHub workflow dispatch 65KB payload limitation. Instead of sending tokens via `repository_dispatch` event, the plugin now creates a branch, commits the token file directly, and creates a pull request automatically.
+This update adds **GitHub direct commit** functionality to the Figma Design Tokens plugin, bypassing the GitHub workflow dispatch 65KB payload limitation. Instead of sending tokens via `repository_dispatch` event, the plugin now commits the token file directly to a specified branch. The push event triggers GitHub Actions workflows automatically.
 
 ## Problem Solved
 
@@ -13,8 +13,9 @@ This update adds **GitHub direct commit** functionality to the Figma Design Toke
 
 **Solution:**
 - Use GitHub API directly to commit files (no payload size restriction)
-- Create branch → commit file → create PR automatically
-- Existing GitHub Actions transformation workflow still runs on PR
+- Commit to user-specified branch (creates if doesn't exist)
+- Push event triggers existing GitHub Actions workflow
+- No PR creation needed - workflow runs on push
 
 ## Changes Made
 
@@ -24,20 +25,19 @@ Complete GitHub API integration similar to existing GitLab implementation:
 
 **Features:**
 - ✅ Get default branch (main/develop)
-- ✅ Create new branch for token update
+- ✅ Check if branch exists
+- ✅ Create new branch if needed (from default branch)
 - ✅ Check if file exists (get SHA for updates)
 - ✅ Upload/update file via GitHub Contents API
-- ✅ Auto-create Pull Request with description
 - ✅ Proper error handling and authentication
 
 **Workflow:**
 ```
-1. Get default branch SHA
-2. Create new branch (figma-tokens-update-{timestamp})
+1. Check if target branch exists
+2. If not, get default branch SHA and create target branch
 3. Check if file exists (for SHA)
-4. Commit token file to new branch
-5. Create PR from new branch to default branch
-6. GitHub Actions runs transformation on PR
+4. Commit token file to target branch
+5. Push event triggers GitHub Actions workflow
 ```
 
 ### 2. Updated: `src/config/config.ts`
@@ -70,6 +70,17 @@ Added GitHub commit handler in the URL export flow:
 - `https://github.com/owner/repo`
 - `owner/repo`
 
+### 4. Updated: `src/ui/components/UrlExportSettings.tsx`
+
+Added Branch input field for GitHub Direct Commit:
+
+**Features:**
+- Shows "Branch" field when `github_commit` auth type is selected
+- User specifies target branch name (e.g., "main", "develop", "design-tokens")
+- Required field with validation (no whitespace allowed)
+- Matches GitLab implementation pattern for consistency
+- Branch is created automatically if it doesn't exist
+
 ## Usage Instructions
 
 ### Plugin Settings
@@ -88,8 +99,9 @@ Auth Type: github_commit
 Access Token: ghp_YOUR_GITHUB_TOKEN_HERE
 (Token needs permissions: repo, workflow)
 
-Branch/Reference: figma-tokens-update
-(Optional - will auto-generate if empty)
+Branch: main
+(Or any branch name: develop, design-tokens, feature/tokens, etc.)
+Note: Branch will be created automatically if it doesn't exist
 
 Filename: figma-design-tokens.json
 ```
@@ -101,10 +113,10 @@ Filename: figma-design-tokens.json
 **Option 1: Send to Server**
 1. Open plugin: `Design Tokens > Send Design Tokens to Url`
 2. Plugin will:
-   - Create new branch
+   - Check if specified branch exists
+   - Create branch if it doesn't exist
    - Commit token file (no size limit!)
-   - Create Pull Request automatically
-   - Add PR description with changes
+   - Push triggers GitHub Actions workflow automatically
 
 **Option 2: Manual Export**
 1. Export JSON file: `Design Tokens > Export Design Token File`
@@ -126,19 +138,17 @@ Filename: figma-design-tokens.json
 
 **Current caspar-frontend workflow:**
 
-1. ✅ Plugin creates branch + commits tokens (NEW - no payload limit)
-2. ✅ Plugin creates Pull Request automatically
-3. ✅ GitHub Actions detects PR
-4. ✅ Runs transformation: `.github/workflows/figma-tokens.yml`
-5. ✅ Generates CSS/SCSS/JS files
-6. ✅ Team reviews PR
-7. ✅ Merge to main/develop
+1. ✅ Plugin commits tokens to specified branch (NEW - no payload limit)
+2. ✅ Push event triggers GitHub Actions workflow
+3. ✅ Runs transformation: `.github/workflows/figma-tokens.yml`
+4. ✅ Generates CSS/SCSS/JS files
+5. ✅ Files are committed back to the branch
+6. ✅ Team can create PR manually if needed for review
 
 **No changes needed to:**
-- Existing GitHub Actions workflow
+- Existing GitHub Actions workflow (just needs push event trigger)
 - Style Dictionary transformation
 - Token consumption in application
-- PR review process
 
 ## Testing in Figma
 
@@ -202,8 +212,9 @@ Auth Type: github_commit
 Access Token: ghp_YOUR_TOKEN_HERE
 (Paste the token from Step 3)
 
-Branch/Reference: (leave empty for auto-generation)
-(Optional: enter "figma-tokens-update" for custom branch name)
+Branch: main
+(Or specify any branch name: develop, design-tokens, etc.)
+Note: Branch will be created if it doesn't exist
 
 Filename: figma-design-tokens.json
 (This should match the file in caspar-frontend repo)
@@ -226,18 +237,19 @@ Filename: figma-design-tokens.json
 ### Step 6: Verify on GitHub
 
 1. Go to: https://github.com/casparhealth/caspar-frontend
-2. Click: **Pull requests** tab
-3. You should see a new PR titled: **"Update design tokens from Figma"**
-4. Click on the PR to review:
-   - Check the branch name (e.g., `figma-tokens-update-1729089600000`)
+2. Navigate to the branch you specified (e.g., "main" or "design-tokens")
+3. Check the commits:
    - Verify `figma-design-tokens.json` was committed
    - Check file size is ~113KB (all 867 tokens)
-   - Review the auto-generated PR description
+   - Look for commit message: "Update figma-design-tokens.json from Figma"
+4. Check the **Actions** tab:
+   - Verify the workflow is running or completed
+   - Check that transformation succeeded
 
 ### Step 7: Verify GitHub Actions Workflow
 
-1. In the PR, click: **Checks** tab
-2. Verify the workflow is running: `figma-tokens`
+1. Go to the **Actions** tab in the repository
+2. Find the latest workflow run for `figma-tokens`
 3. Wait for workflow to complete (usually 1-2 minutes)
 4. Check that transformation succeeded:
    - CSS files generated
@@ -246,7 +258,7 @@ Filename: figma-design-tokens.json
 
 ### Step 8: Review Generated Files
 
-In the PR, check these files were updated:
+On the branch you specified, check these files were updated:
 
 ```
 ✅ figma-design-tokens.json (113KB - all 867 tokens)
@@ -257,11 +269,12 @@ In the PR, check these files were updated:
 
 ### Step 9: Test in Local Development
 
-1. Checkout the PR branch:
+1. Checkout the branch:
 ```bash
 cd ~/caspar-frontend
 git fetch origin
-git checkout figma-tokens-update-TIMESTAMP
+git checkout main  # or whatever branch you specified
+git pull
 ```
 
 2. Verify tokens are correct:
@@ -283,19 +296,16 @@ npm start
 make dev
 ```
 
-### Step 10: Merge or Close
+### Step 10: Create PR if Needed
 
-**If everything looks good:**
-1. Add reviewers to the PR
-2. Wait for approval
-3. Merge the PR
-4. Delete the branch (GitHub will prompt you)
+**If you committed to a feature branch:**
+1. Create a Pull Request from your branch to main/develop
+2. Add reviewers
+3. Wait for approval and merge
 
-**If there are issues:**
-1. Close the PR
-2. Delete the branch
-3. Check plugin settings
-4. Try exporting again
+**If you committed directly to main/develop:**
+- Changes are already live
+- No PR needed
 
 ## Common Testing Scenarios
 
@@ -304,36 +314,37 @@ make dev
 **Goal:** Verify plugin can create new branch and file
 
 **Steps:**
-1. Configure plugin with GitHub token
+1. Configure plugin with GitHub token and a new branch name (e.g., "design-tokens")
 2. Export tokens
-3. Check new branch created
+3. Check branch was created on GitHub
 4. Verify file committed
-5. Confirm PR opened
+5. Confirm workflow ran
 
-**Expected Result:** ✅ Branch + File + PR all created successfully
+**Expected Result:** ✅ Branch + File + Workflow run all completed successfully
 
 ### Scenario 2: Updating Existing Tokens
 
-**Goal:** Verify plugin can update existing file
+**Goal:** Verify plugin can update existing file in existing branch
 
 **Steps:**
 1. Modify tokens in Figma
-2. Export tokens again
-3. Check existing branch is reused or new branch created
-4. Verify file updated with new content
+2. Export tokens again to the same branch
+3. Check that file is updated with new content
+4. Verify workflow runs again
 
-**Expected Result:** ✅ File updated with latest tokens
+**Expected Result:** ✅ File updated with latest tokens, workflow triggered
 
-### Scenario 3: Multiple Exports
+### Scenario 3: Different Branch Names
 
-**Goal:** Test repeated exports create separate branches
+**Goal:** Test flexibility of branch naming
 
 **Steps:**
-1. Export tokens → PR created
-2. Export tokens again (without merging first PR)
-3. Check that second export creates new branch with different timestamp
+1. Export tokens to "main" branch
+2. Change settings to "develop" branch
+3. Export tokens again
+4. Verify both branches have the token file
 
-**Expected Result:** ✅ Two separate PRs with different branch names
+**Expected Result:** ✅ Can commit to any branch specified in settings
 
 ### Scenario 4: Large Token File
 

@@ -300,6 +300,32 @@ export const UrlExportSettings = () => {
         </>
       )}
 
+      {config.key.authType.githubCommit === settings.authType && (
+        <>
+          <h3>
+            Branch
+            <Info
+              width={180}
+              label='The branch where the file will be committed. Branch will be created automatically if it does not exist.'
+            />
+          </h3>
+          <Row fill>
+            <Input
+              type="text"
+              required
+              pattern="\S+"
+              placeholder="main"
+              value={settings.reference}
+              onChange={(value) =>
+                updateSettings((draft) => {
+                  draft.reference = value
+                })
+              }
+            />
+          </Row>
+        </>
+      )}
+
       <Separator />
       <Title size="xlarge" weight="bold">
         About This Export
