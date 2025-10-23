@@ -562,19 +562,9 @@ https://api.github.com/repos/lukasoppermann/design-token-transformer/dispatches
 
 **Using GitHub Direct Commit:**
 
-If you use the `github_commit` auth type for direct file commits, the server url must be in the format:
+If you use the `github_commit` auth type for direct file commits, the server url can be:
 
-```
-https://api.github.com/repos/:username/:repo
-```
-
-For the repository `lukasoppermann/design-token-transformer` this would be:
-
-```
-https://api.github.com/repos/lukasoppermann/design-token-transformer
-```
-
-You can also use the regular GitHub URL format:
+- `https://api.github.com/repos/:username/:repo`
 - `https://github.com/:username/:repo`
 
 #### **Auth header**
