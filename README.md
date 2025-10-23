@@ -2,6 +2,20 @@
 > **Caspar Health Fork**
 > This is a fork of the [official Design Tokens plugin](https://github.com/lukasoppermann/design-tokens) with added GitHub Direct Commit functionality. See [MODIFICATIONS.md](MODIFICATIONS.md) for details on our changes.
 
+## ⚠️ Required Plugin Settings
+
+Before using this plugin, you **MUST** enable the following settings in the plugin UI (`Design Tokens > Settings`):
+
+### Reference mode from variables
+
+1. **Add mode to design token name (if 2 or more modes)** - ✅ ENABLED
+2. **Add mode to design token value** - ✅ ENABLED
+
+![Required Settings](https://github.com/user-attachments/assets/required-settings.png)
+
+> **Why is this required?**
+> These settings ensure that tokens with multiple modes (e.g., responsive breakpoints like 1024dp, 1280dp, 1440dp, 1920dp) are properly grouped and include mode information in the exported JSON. Without these settings, tokens will be exported with an incorrect flat structure missing the mode grouping level.
+
 ## Quick Start for Caspar Health Team
 
 ### Installing the Plugin in Figma Organization

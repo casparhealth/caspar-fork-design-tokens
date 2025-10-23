@@ -126,29 +126,9 @@ const urlExport = (parent, exportSettings: urlExportSettings, requestBody: urlEx
   }
 
   if (exportSettings.authType === config.key.authType.githubCommit) {
-    // Parse owner/repo from URL (e.g., "https://api.github.com/repos/casparhealth/caspar-frontend")
-    // or from format "owner/repo"
-    let owner: string, repo: string
-    
-    if (exportSettings.url.includes('github.com')) {
-      const urlParts = exportSettings.url.split('/')
-      const reposIndex = urlParts.indexOf('repos')
-      if (reposIndex !== -1 && urlParts.length > reposIndex + 2) {
-        owner = urlParts[reposIndex + 1]
-        repo = urlParts[reposIndex + 2]
-      } else {
-        // Try to parse from github.com/owner/repo format
-        owner = urlParts[urlParts.length - 2]
-        repo = urlParts[urlParts.length - 1]
-      }
-    } else {
-      // Format: owner/repo
-      [owner, repo] = exportSettings.url.split('/')
-    }
-
     const githubRepo = new GithubRepository({
-      owner: owner,
-      repo: repo,
+      owner: exportSettings.url.split('/')[3],
+      repo: exportSettings.url.split('/')[4],
       token: exportSettings.accessToken
     })
     githubRepo.upload(requestBody, exportSettings, {
