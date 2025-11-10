@@ -27,13 +27,11 @@ export class GithubRepository {
     const filepath = clientPayload.filename
 
     try {
-      // Use reference field (branch name) from settings, same as GitLab
-      const targetBranch = branch
-      console.log('Step 1: Using target branch:', targetBranch)
+      console.log('Step 1: Using target branch:', branch)
 
       // Check if branch exists
       console.log('Step 2: Checking if branch exists...')
-      const branchExists = await this._checkBranchExists(targetBranch)
+      const branchExists = await this._checkBranchExists(branch)
       
       if (!branchExists) {
         // Branch doesn't exist - create it from default branch
@@ -44,7 +42,7 @@ export class GithubRepository {
         const defaultBranchSHA = await this._getBranchSHA(defaultBranch)
         console.log('Default branch SHA:', defaultBranchSHA)
         
-        await this._createBranch(targetBranch, defaultBranchSHA)
+        await this._createBranch(branch, defaultBranchSHA)
         console.log('Branch created successfully')
       } else {
         console.log('Branch already exists')
@@ -52,7 +50,7 @@ export class GithubRepository {
 
       // Check if file exists to get its SHA
       console.log('Step 3: Checking if file exists:', filepath)
-      const fileSHA = await this._getFileSHA(filepath, targetBranch)
+      const fileSHA = await this._getFileSHA(filepath, branch)
       console.log('File SHA:', fileSHA || 'File does not exist (will create new)')
 
       // Upload the file
@@ -65,7 +63,7 @@ export class GithubRepository {
         content: encodedContent,
         commitMessage: clientPayload.commitMessage || `Update design tokens at ${Date.now()}`,
         filepath: filepath,
-        branch: targetBranch,
+        branch: branch,
         fileSHA: fileSHA
       })
     } catch (error) {
@@ -193,10 +191,22 @@ export class GithubRepository {
         }
 
         const statusCode = request.status
-        // 201 = created, 422 = already exists (which is ok for us)
-        if (statusCode === 201 || statusCode === 422) {
+        if (statusCode === 201) {
           resolve()
           return
+        }
+
+        if (statusCode === 422) {
+          // Check if branch already exists (acceptable) vs other validation errors
+          try {
+            const response = JSON.parse(request.responseText)
+            if (response.message && response.message.includes('Reference already exists')) {
+              resolve()
+              return
+            }
+          } catch (_e) {
+            // Fall through to reject if we can't parse response
+          }
         }
 
         reject({
@@ -221,7 +231,7 @@ export class GithubRepository {
       const request = new XMLHttpRequest()
       request.open(
         'GET',
-        `https://api.github.com/repos/${this.owner}/${this.repo}/contents/${filepath}?ref=${branch}`
+        `https://api.github.com/repos/${this.owner}/${this.repo}/contents/${encodeURIComponent(filepath)}?ref=${branch}`
       )
       this._setRequestHeader(request)
 
@@ -269,14 +279,14 @@ export class GithubRepository {
       branch: branch
     }
 
-    // Include SHA if file exists (for update)
+    // Include SHA if file exists (required for updates)
     if (fileSHA) {
       body.sha = fileSHA
     }
 
     request.open(
       'PUT',
-      `https://api.github.com/repos/${this.owner}/${this.repo}/contents/${filepath}`
+      `https://api.github.com/repos/${this.owner}/${this.repo}/contents/${encodeURIComponent(filepath)}`
     )
     this._setRequestHeader(request)
 
